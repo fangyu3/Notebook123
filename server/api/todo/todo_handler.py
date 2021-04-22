@@ -9,20 +9,18 @@ todo_handler = Blueprint('todo_handler', __name__)
 @todo_handler.route("/", methods=["GET"])
 def get_all_todos():
     try:
-        todos = Todo.query.all()
-
-        print(todos[0].to_dict().get("due_date"))
+        todos = Todo.query.filter(Todo.status=="in-progress").order_by(Todo.due_date).all()
 
         return jsonify({
             "success": True,
             "todos": [todo.to_dict() for todo in todos],
             "msg":"Get all todos successfully"
-        })
+        }),200
     except Exception as e:
         return jsonify({
             "Success": False,
             "msg": str(e)
-        })
+        }),400
 
 
 @todo_handler.route("", methods=["POST"])
@@ -35,6 +33,8 @@ def create_todo():
                     description=data.get("description"),
                     due_date=datetime.strptime(
                         data.get("dueDate"), "%Y-%m-%d"),
+                    category=data.get("category"),
+                    status = "in-progress",
                     created_at=datetime.now()
                     )
         db.session.add(todo)
@@ -72,12 +72,12 @@ def update_todo(id):
             "success": True,
             "todo":todo_to_update.to_dict(),
             "msg": "Update successful"
-        })
+        }),200
     except Exception as e:
         return jsonify({
             "Success": False,
             "msg": str(e)
-        })
+        }),400
 
 
 @todo_handler.route("/<int:id>", methods=["DELETE"])
@@ -96,12 +96,12 @@ def delete_todo(id):
         return jsonify({
             "success": True,
             "msg": "Delete successful"
-        })
+        }),200
     except Exception as e:
         return jsonify({
             "Success": False,
             "msg": str(e)
-        })
+        }),400
 
 
 @todo_handler.route("/clear", methods=["DELETE"])
@@ -115,10 +115,28 @@ def delete_all_todos():
         return jsonify({
             "success": True,
             "msg": "Cleared todo list"
-        })
+        }),200
 
     except Exception as e:
         return jsonify({
             "Success": False,
             "msg": str(e)
-        })
+        }),400
+
+@todo_handler.route("/<int:id>/complete",methods=["PUT"])
+def complete_todo(id):
+    try:
+        data = request.get_json()
+        completed_todo = Todo.query.get(id)
+        completed_todo.status = data.get("status")
+        db.session.commit()
+        return jsonify({
+            "success":True,
+            "todo":completed_todo.to_dict(),
+            "msg":"Task completed!"
+        }),200
+    except Exception as e:
+        return jsonify({
+            "success":False,
+            "msg": str(e)
+        }),400
